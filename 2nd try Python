@@ -1,0 +1,154 @@
+#!/usr/bin/env python
+
+## this works on a raspberry pi 2
+## uses a pifacedigital board for IO and motor control
+## that library works best in python 2.7
+
+import sys
+import os
+import time
+import timeit
+import atexit
+import pifacedigitalio as pfd
+
+pfd.init()
+
+#set up on/off button input
+ON = pfd.digital_read(7)
+
+# output to power on LED initially set to OFF
+LED = pfd.digital_write(7,0)
+
+#setup data logging to file
+site = 'TouchSpin UGA'
+
+filename = site +'.txt'
+
+## set up steps and speed
+maxSteps = 500
+sleep_time = .01
+maxCycles = 250
+ 
+def motorsOff():
+    for i in range (0,7):
+        pfd.output_pins[i].turn_off()
+
+atexit.register(motorsOff)
+
+
+## FOR HBRIDGE DRIVERS USE THIS CODE set DC to piface pins 4,5 and stepper to 0 - 3
+## Stolen from ObiWan
+def step1():
+    pfd.output_pins[3].turn_on()
+    pfd.output_pins[2].turn_off()
+    pfd.output_pins[1].turn_off()
+    pfd.output_pins[0].turn_on()
+
+def step2():
+    pfd.output_pins[3].turn_on()
+    pfd.output_pins[2].turn_off()
+    pfd.output_pins[1].turn_on()
+    pfd.output_pins[0].turn_off()
+
+def step3():
+    pfd.output_pins[3].turn_off()
+    pfd.output_pins[2].turn_on()
+    pfd.output_pins[1].turn_on()
+    pfd.output_pins[0].turn_off()
+
+def step4():
+    pfd.output_pins[3].turn_off()
+    pfd.output_pins[2].turn_on()
+    pfd.output_pins[1].turn_off()
+    pfd.output_pins[0].turn_on()
+
+def step5():
+    pfd.output_pins[7].turn_on()
+    pfd.output_pins[6].turn_off()
+    pfd.output_pins[5].turn_off()
+    pfd.output_pins[4].turn_on()
+
+def step6():
+    pfd.output_pins[7].turn_on()
+    pfd.output_pins[6].turn_off()
+    pfd.output_pins[5].turn_on()
+    pfd.output_pins[4].turn_off()
+
+def step7():
+    pfd.output_pins[7].turn_off()
+    pfd.output_pins[6].turn_on()
+    pfd.output_pins[5].turn_on()
+    pfd.output_pins[4].turn_off()
+
+def step8():
+    pfd.output_pins[7].turn_off()
+    pfd.output_pins[6].turn_on()
+    pfd.output_pins[5].turn_off()
+    pfd.output_pins[4].turn_on()
+
+def stopmotor():
+    pfd.output_pins[3].turn_on()
+    pfd.output_pins[2].turn_on()
+    pfd.output_pins[1].turn_on()
+    pfd.output_pins[0].turn_on()
+
+
+def clockW():
+    for i in range(0,maxSteps):
+        step1()
+        sleep(sleep_time)
+        step2()
+        sleep(sleep_time)
+        step3()
+        sleep(sleep_time)
+        step4()
+        sleep(sleep_time);
+        ##stopmotor();
+
+def CclockW():
+    for i in range(0,maxSteps):
+        step4()
+        sleep(sleep_time)
+        step3()
+        sleep(sleep_time)
+        step2()
+        sleep(sleep_time)
+        step1()
+        sleep(sleep_time);
+        ##stopmotor();
+
+
+def halt():
+    for i in range (0,7): 
+        pfd.output_pins[i].turn_off()
+
+try:
+
+    while ON == 1:
+        LED = 1
+        cycles = 0        
+        startTime = time.time()
+        for c in range (0,maxCycles):
+            clockW()
+            CclockW()
+            cycles = cycles + 1
+            ON = pfd.digital_read(7)
+            if ON == 0:
+                break
+        ON = 0
+
+    LED == 0    
+    endTime = time.time()
+    runTime == endTime - start.Time
+    if os.path.exists(filename):
+        append_write = 'a' # append if already exists
+    else:
+        append_write = 'w' # make a new file if not
+        runData = open(filename,append_write)
+        runData.write("Run: " + runTime + " seconds. " + cycles + " Cycles" + '\n')
+        runData.close()
+        halt()
+
+except KeyBoardInterrupt:
+    halt()
+    print("You cancelled the program!!!")
